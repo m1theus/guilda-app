@@ -1,0 +1,377 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PresenceStatus {
+  ONLINE
+  IDLE
+  DND
+  OFFLINE
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum AttachmentStatus {
+  PENDING
+  READY
+}
+
+model User {
+  id                      String                     @id @default(uuid()) @db.Uuid
+  username                String                     @unique @db.VarChar(32)
+  displayName             String                     @db.VarChar(64)
+  email                   String                     @unique @db.VarChar(320)
+  passwordHash            String                     @db.VarChar(255)
+  avatarUrl               String?                    @db.Text
+  pronouns                String?                    @db.VarChar(40)
+  bio                     String?                    @db.VarChar(190)
+  bannerUrl               String?                    @db.Text
+  profileColor            String?                    @db.VarChar(7)
+  status                  PresenceStatus             @default(OFFLINE)
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  sessions                Session[]
+  ownedServers            Server[]                   @relation("ServerOwner")
+  serverMembers           ServerMember[]
+  messages                Message[]                  @relation("MessageAuthor")
+  directMessages          DirectMessage[]            @relation("DirectMessageAuthor")
+  attachments             Attachment[]               @relation("AttachmentUploader")
+  invites                 Invite[]                   @relation("InviteCreator")
+  outgoingFriendships     Friendship[]               @relation("FriendshipRequester")
+  incomingFriendships     Friendship[]               @relation("FriendshipAddressee")
+  bans                    Ban[]                      @relation("BannedUser")
+  issuedBans              Ban[]                      @relation("BanIssuer")
+  blocks                  Block[]                    @relation("Blocker")
+  blockedBy               Block[]                    @relation("BlockedUser")
+  reports                 Report[]                   @relation("ReportReporter")
+  reportsAgainst          Report[]                   @relation("ReportTargetUser")
+  reactions               MessageReaction[]
+  readStates              ReadState[]
+  auditLogs               AuditLog[]                 @relation("AuditActor")
+  conversationMemberships DirectConversationMember[]
+  createdConversations    DirectConversation[]       @relation("ConversationCreator")
+
+  @@index([status])
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  refreshTokenHash String    @unique @db.VarChar(255)
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  rotatedAt        DateTime?
+  replacedById     String?   @unique @db.Uuid
+  userAgent        String?   @db.Text
+  ipAddress        String?   @db.VarChar(45)
+  createdAt        DateTime  @default(now())
+  lastUsedAt       DateTime?
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy       Session?  @relation("SessionRotation", fields: [replacedById], references: [id], onDelete: SetNull)
+  rotatedFrom      Session?  @relation("SessionRotation")
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model Server {
+  id        String         @id @default(uuid()) @db.Uuid
+  name      String         @db.VarChar(100)
+  iconUrl   String?        @db.Text
+  ownerId   String         @db.Uuid
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  owner     User           @relation("ServerOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members   ServerMember[]
+  channels  Channel[]
+  roles     Role[]
+  invites   Invite[]
+  bans      Ban[]
+  reports   Report[]
+  auditLogs AuditLog[]
+
+  @@index([ownerId])
+}
+
+model ServerMember {
+  serverId String             @db.Uuid
+  userId   String             @db.Uuid
+  nickname String?            @db.VarChar(80)
+  joinedAt DateTime           @default(now())
+  server   Server             @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles    ServerMemberRole[]
+
+  @@id([serverId, userId])
+  @@index([userId])
+}
+
+model Role {
+  id          String             @id @default(uuid()) @db.Uuid
+  serverId    String             @db.Uuid
+  name        String             @db.VarChar(64)
+  permissions Int                @default(0)
+  color       String?            @db.VarChar(7)
+  position    Int                @default(0)
+  createdAt   DateTime           @default(now())
+  server      Server             @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  members     ServerMemberRole[]
+
+  @@unique([serverId, id])
+  @@unique([serverId, name])
+  @@index([serverId, position])
+}
+
+model ServerMemberRole {
+  serverId String       @db.Uuid
+  userId   String       @db.Uuid
+  roleId   String       @db.Uuid
+  member   ServerMember @relation(fields: [serverId, userId], references: [serverId, userId], onDelete: Cascade)
+  role     Role         @relation(fields: [serverId, roleId], references: [serverId, id], onDelete: Cascade)
+
+  @@id([serverId, userId, roleId])
+  @@index([roleId])
+}
+
+model Channel {
+  id         String      @id @default(uuid()) @db.Uuid
+  serverId   String      @db.Uuid
+  name       String      @db.VarChar(100)
+  type       ChannelType
+  position   Int         @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  server     Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  attachments Attachment[]
+  readStates  ReadState[]
+
+  @@unique([serverId, name])
+  @@index([serverId, position])
+}
+
+model Message {
+  id          String            @id @default(uuid()) @db.Uuid
+  channelId   String            @db.Uuid
+  authorId    String            @db.Uuid
+  content     String            @db.Text
+  clientNonce String            @db.VarChar(128)
+  replyToId   String?           @db.Uuid
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime?
+  channel     Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author      User              @relation("MessageAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  replyTo     Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies     Message[]         @relation("MessageReplies")
+  attachments Attachment[]
+  reactions   MessageReaction[]
+  readStates  ReadState[]       @relation("LastReadMessage")
+  reports     Report[]          @relation("ReportedMessage")
+
+  @@unique([channelId, authorId, clientNonce])
+  @@index([channelId, createdAt, id])
+  @@index([channelId, deletedAt])
+  @@index([authorId, createdAt])
+}
+
+model Attachment {
+  id           String           @id @default(uuid()) @db.Uuid
+  channelId    String           @db.Uuid
+  messageId    String?          @db.Uuid
+  uploadedById String           @db.Uuid
+  storageKey   String           @unique @db.Text
+  filename     String           @db.VarChar(255)
+  mimeType     String           @db.VarChar(127)
+  size         BigInt
+  status       AttachmentStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  channel      Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  message      Message?         @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  uploadedBy   User             @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([channelId, status])
+  @@index([messageId])
+  @@index([uploadedById, createdAt])
+}
+
+model Invite {
+  code        String    @id @db.VarChar(16)
+  serverId    String    @db.Uuid
+  createdById String    @db.Uuid
+  expiresAt   DateTime?
+  maxUses     Int?
+  uses        Int       @default(0)
+  createdAt   DateTime  @default(now())
+  server      Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("InviteCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([serverId, expiresAt])
+}
+
+model Friendship {
+  pairKey     String           @id @db.VarChar(73)
+  requesterId String           @db.Uuid
+  addresseeId String           @db.Uuid
+  status      FriendshipStatus @default(PENDING)
+  requestedAt DateTime         @default(now())
+  respondedAt DateTime?
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+
+model DirectConversation {
+  id          String                     @id @default(uuid()) @db.Uuid
+  pairKey     String                     @unique @db.VarChar(73)
+  createdById String                     @db.Uuid
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  createdBy   User                       @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  members     DirectConversationMember[]
+  messages    DirectMessage[]
+
+  @@index([createdById])
+}
+
+model DirectConversationMember {
+  conversationId String             @db.Uuid
+  userId         String             @db.Uuid
+  joinedAt       DateTime           @default(now())
+  lastReadAt     DateTime?
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model DirectMessage {
+  id             String             @id @default(uuid()) @db.Uuid
+  conversationId String             @db.Uuid
+  authorId       String             @db.Uuid
+  content        String             @db.Text
+  clientNonce    String             @db.VarChar(128)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author         User               @relation("DirectMessageAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  @@unique([conversationId, authorId, clientNonce])
+
+  @@index([conversationId, createdAt, id])
+  @@index([authorId, createdAt])
+}
+
+model Ban {
+  serverId   String    @db.Uuid
+  userId     String    @db.Uuid
+  bannedById String    @db.Uuid
+  reason     String?   @db.Text
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  server     Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user       User      @relation("BannedUser", fields: [userId], references: [id], onDelete: Cascade)
+  bannedBy   User      @relation("BanIssuer", fields: [bannedById], references: [id], onDelete: Restrict)
+
+  @@id([serverId, userId])
+  @@index([userId, expiresAt])
+}
+
+model Block {
+  blockerId String   @db.Uuid
+  blockedId String   @db.Uuid
+  createdAt DateTime @default(now())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("BlockedUser", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model Report {
+  id           String       @id @default(uuid()) @db.Uuid
+  reporterId   String       @db.Uuid
+  serverId     String?      @db.Uuid
+  messageId    String?      @db.Uuid
+  targetUserId String?      @db.Uuid
+  reason       String       @db.Text
+  status       ReportStatus @default(OPEN)
+  resolution   String?      @db.Text
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+  reporter     User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  server       Server?      @relation(fields: [serverId], references: [id], onDelete: SetNull)
+  message      Message?     @relation("ReportedMessage", fields: [messageId], references: [id], onDelete: SetNull)
+  targetUser   User?        @relation("ReportTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([serverId, createdAt])
+  @@index([messageId])
+  @@index([targetUserId])
+}
+
+model MessageReaction {
+  messageId String   @db.Uuid
+  userId    String   @db.Uuid
+  emoji     String   @db.VarChar(64)
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId, emoji])
+  @@index([userId, createdAt])
+}
+
+model ReadState {
+  userId            String   @db.Uuid
+  channelId         String   @db.Uuid
+  lastReadMessageId String?  @db.Uuid
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel           Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  lastReadMessage   Message? @relation("LastReadMessage", fields: [lastReadMessageId], references: [id], onDelete: SetNull)
+
+  @@id([userId, channelId])
+  @@index([channelId, updatedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  serverId   String   @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String   @db.VarChar(64)
+  targetType String?  @db.VarChar(64)
+  targetId   String?  @db.Uuid
+  metadata   Json
+  createdAt  DateTime @default(now())
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([serverId, createdAt])
+  @@index([serverId, action, createdAt])
+  @@index([targetId])
+}

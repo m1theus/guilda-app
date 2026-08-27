@@ -1,0 +1,6 @@
+ALTER TABLE "User"
+  ALTER COLUMN "displayName" TYPE VARCHAR(64),
+  ADD COLUMN "pronouns" VARCHAR(40),
+  ADD COLUMN "bio" VARCHAR(190),
+  ADD COLUMN "bannerUrl" TEXT,
+  ADD COLUMN "profileColor" VARCHAR(7);

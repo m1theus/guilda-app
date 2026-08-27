@@ -1,0 +1,34 @@
+{
+  "name": "guilda",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.12.0"
+  },
+  "scripts": {
+    "build": "pnpm --recursive --if-present build",
+    "dev": "pnpm --parallel --filter @guilda/server --filter @guilda/desktop dev",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm --recursive --if-present test",
+    "typecheck": "pnpm --recursive --if-present typecheck",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "desktop:native:build": "pnpm --filter @guilda/desktop native:build",
+    "desktop:native:check": "pnpm --filter @guilda/desktop native:check",
+    "desktop:native:dev": "pnpm --filter @guilda/desktop native:dev",
+    "web:preview": "pnpm --filter @guilda/desktop web:preview",
+    "desktop:native:test": "pnpm --filter @guilda/desktop native:test",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "@guilda/config": "workspace:*",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@guilda/validation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test",
+    "build": "tsc --outDir dist --declaration --declarationMap"
+  },
+  "dependencies": {
+    "@guilda/types": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@guilda/types",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api.ts",
+    "./entities": "./src/entities.ts",
+    "./events": "./src/events.ts",
+    "./media": "./src/media.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

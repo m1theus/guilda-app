@@ -1,0 +1,51 @@
+[package]
+name = "guilda-desktop"
+version = "0.3.5"
+description = "Guilda desktop client"
+authors = ["Guilda contributors"]
+edition = "2021"
+license = "MIT"
+rust-version = "1.77.2"
+
+[lib]
+name = "guilda_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.4.1", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+notify-rust = "4.11"
+url = "2.5"
+tauri = { version = "2.8", features = ["tray-icon"] }
+tauri-plugin-deep-link = "2.4"
+tauri-plugin-single-instance = { version = "2.4", features = ["deep-link"] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+futures-channel = "0.3"
+objc2 = "0.6"
+objc2-av-foundation = { version = "0.3", default-features = false, features = [
+    "AVCaptureDevice",
+    "AVMediaFormat",
+    "block2",
+] }
+security-framework = { version = "3.7", features = ["OSX_10_15"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+keyring = { version = "3.6", default-features = false, features = [
+    "windows-native",
+    "linux-native-sync-persistent",
+    "crypto-rust",
+] }
+
+[target.'cfg(windows)'.dependencies]
+xcap = { version = "=0.9.7", features = ["wgc", "image"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

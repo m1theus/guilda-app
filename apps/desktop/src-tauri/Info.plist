@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>Guilda</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeRole</key>
+      <string>Viewer</string>
+      <key>CFBundleURLName</key>
+      <string>com.guilda.desktop</string>
+      <key>CFBundleURLSchemes</key>
+      <array><string>guilda</string></array>
+    </dict>
+  </array>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Guilda needs microphone access for voice conversations.</string>
+  <key>NSCameraUsageDescription</key>
+  <string>Guilda needs camera access for video conversations.</string>
+  <key>NSScreenCaptureUsageDescription</key>
+  <string>Guilda needs screen recording access when you share your screen.</string>
+</dict>
+</plist>

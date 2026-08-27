@@ -1,0 +1,18 @@
+services:
+  livekit:
+    image: livekit/livekit-server:v1.8.0
+    command: --config /etc/livekit/livekit.yaml
+    ports:
+      - '7880:7880'
+      - '7881:7881'
+      - '7882:7882/udp'
+    environment:
+      LIVEKIT_KEYS: 'devkey:devsecret-change-me'
+    volumes:
+      - ./livekit.yaml:/etc/livekit/livekit.yaml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '--quiet', 'http://127.0.0.1:7880']
+      interval: 10s
+      timeout: 3s
+      retries: 5

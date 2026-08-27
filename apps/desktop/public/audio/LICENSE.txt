@@ -1,0 +1,9 @@
+Guilda desktop media sound effects
+
+Source: https://www.kenney.nl/assets/ui-audio
+Pack: UI Audio
+Files: voice-joined.ogg, microphone-mute.ogg, microphone-unmute.ogg, screen-share-start.ogg, screen-share-stop.ogg
+
+The UI Audio pack is published by Kenney under the Creative Commons CC0 1.0 Universal public-domain dedication. See https://creativecommons.org/publicdomain/zero/1.0/.
+
+The bundled files are copied from the pack's Audio/switch1.ogg, Audio/switch2.ogg, Audio/switch3.ogg, Audio/click1.ogg, and Audio/click2.ogg files. No attribution is required under CC0; this notice is retained as provenance.
